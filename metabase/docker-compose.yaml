@@ -1,0 +1,13 @@
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: olist-metabase
+    ports:
+      - "3001:3000"
+    volumes:
+      - metabase-data:/metabase-data
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+
+volumes:
+  metabase-data:

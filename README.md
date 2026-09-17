@@ -15,6 +15,8 @@ Projet réalisé dans le cadre d'une candidature de stage PFE (Data Engineering 
 - [Structure du repo](#structure-du-repo)
 - [Modèles dbt (couche gold)](#modèles-dbt-couche-gold)
 - [Qualité des données](#qualité-des-données)
+- [CI/CD](#cicd)
+- [Dashboard KPI](#dashboard-kpi)
 - [Instructions de reproduction](#instructions-de-reproduction)
 - [Résultats](#résultats)
 
@@ -38,12 +40,13 @@ Snowflake STAGING (silver)
 Snowflake ANALYTICS (gold)
       │
       ▼
-BI / Dashboards
+Dashboard Metabase
 ```
 
-- **Terraform** provisionne l'intégralité de l'infra : bucket S3, rôle IAM (storage integration Snowflake↔S3), warehouse, database, les 3 schémas et les rôles RBAC Snowflake.
-- **Airflow** orchestre le chargement RAW (`COPY INTO`, parallélisé sur les 9 tables) puis déclenche `dbt run` et `dbt test`.
+- **Terraform** provisionne l'intégralité de l'infra : bucket S3, rôle IAM (storage integration Snowflake↔S3), warehouse, database, les 3 schémas et les rôles RBAC Snowflake — state distant sur S3, déployé automatiquement via GitHub Actions.
+- **Airflow** orchestre le chargement RAW (`COPY INTO`, parallélisé sur les 9 tables) puis déclenche `dbt run` et `dbt test` (ce dernier exécuté dans un conteneur Docker dédié).
 - **dbt** transforme RAW → STAGING (silver) → ANALYTICS (gold), avec 46 tests de qualité.
+- **Metabase** se connecte aux tables gold pour l'exploitation des KPIs.
 
 ### DAG Airflow — exécution complète
 
@@ -61,9 +64,11 @@ BI / Dashboards
 | Entrepôt | **Snowflake** | Warehouse cloud, bronze/silver/gold en schémas séparés |
 | Transformation | **dbt** (dbt-snowflake) | SQL modulaire, tests, documentation |
 | Orchestration | **Apache Airflow** | Enchaînement COPY INTO → dbt run → dbt test |
-| Infrastructure as Code | **Terraform** | S3, IAM, warehouse/database/schémas/rôles Snowflake |
+| Infrastructure as Code | **Terraform** | S3, IAM, warehouse/database/schémas/rôles Snowflake, state distant |
 | Isolation dbt | **Docker** (`DockerOperator`) | dbt exécuté dans un conteneur dédié |
+| CI/CD | **GitHub Actions** | `dbt test` sur chaque push, `terraform plan`/`apply` sur PR/merge |
 | Qualité de données | **dbt tests** + **dbt_expectations** | 46 tests automatisés |
+| Visualisation | **Metabase** | Dashboard KPI connecté à la couche gold |
 | Langage | **Python**, **SQL**, **HCL** | Scripts d'ingestion, transformations, infra |
 
 ---
@@ -83,9 +88,14 @@ olist-elt-pipeline/
 │   ├── Dockerfile
 │   └── olist_dbt/
 │       └── models/{staging, intermediate, marts}
+├── metabase/
+│   └── docker-compose.yaml
 ├── scripts/
 │   ├── upload_to_s3.py
 │   └── snowflake_setup.sql
+├── .github/workflows/
+│   ├── dbt_ci.yml
+│   └── terraform_cd.yml
 └── data/raw/   (CSV Olist, non versionnés)
 ```
 
@@ -108,6 +118,29 @@ olist-elt-pipeline/
 - unicité et non-nullité des clés (staging + intermediate)
 - intégrité référentielle (`relationships` entre commandes, produits, vendeurs)
 - cohérence métier (`accepted_values`, plages de valeurs via `dbt_expectations`)
+
+---
+
+## CI/CD
+
+Deux workflows GitHub Actions :
+
+- **`dbt_ci.yml`** — à chaque push touchant `dbt/**` : installation de dbt, `dbt run`, `dbt test` sur un environnement Snowflake dédié.
+- **`terraform_cd.yml`** — `terraform plan` sur chaque Pull Request touchant `infra/terraform/**`, `terraform apply` automatique au merge sur `main`. Le state Terraform est stocké sur un bucket S3 distant, partagé entre poste local et CI/CD.
+
+---
+
+## Dashboard KPI
+
+Dashboard Metabase connecté directement aux tables `ANALYTICS` (gold), avec le rôle Snowflake dédié `OLIST_BI_READER` (lecture seule).
+
+![Dashboard Metabase Olist KPIs Gold](docs/images/metabase_dashboard.png)
+
+- **CA total** et **taux de retard moyen** en indicateurs clés
+- **CA par mois** (tendance)
+- **Taux de retard par région** (état brésilien)
+- **Satisfaction client dans le temps**
+- **Répartition du CA par catégorie produit**
 
 ---
 
@@ -158,7 +191,16 @@ docker compose up airflow-init
 docker compose up -d
 ```
 
-Interface Airflow disponible en local, connexion Snowflake à créer dans **Admin → Connections** (`snowflake_default`), puis déclencher le DAG `olist_elt_pipeline`.
+Connexion Snowflake à créer dans **Admin → Connections** (`snowflake_default`), puis déclencher le DAG `olist_elt_pipeline`.
+
+### 6. Dashboard (Metabase)
+
+```bash
+cd metabase
+docker compose up -d
+```
+
+Connecter la base Snowflake dans l'UI Metabase (rôle `OLIST_BI_READER`, schéma `ANALYTICS`).
 
 ---
 
@@ -178,10 +220,7 @@ Interface Airflow disponible en local, connexion Snowflake à créer dans **Admi
 | geolocation | 1 000 163 |
 | category_translation | 71 |
 
-**Exemple de sortie — `mart_sales_performance` :**
+**KPIs clés (dashboard Metabase) :**
 
-| order_month | product_category | customer_state | n_orders | gross_merchandise_value | avg_order_value |
-|---|---|---|---|---|---|
-| 2016-10-01 | furniture_decor | SP | 18 | 2217.76 | 123.21 |
-| 2016-10-01 | perfumery | SP | 10 | 1689.80 | 168.98 |
-| 2016-10-01 | health_beauty | RJ | 6 | 1584.75 | 264.13 |
+- CA total : **15 735 527,03 R$**
+- Taux de retard moyen : **9,1 %**
