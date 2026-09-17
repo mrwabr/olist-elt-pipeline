@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: int_customers__location
+    description: >
+      Enrichit chaque client avec sa position géographique moyenne
+      (latitude/longitude) déduite du préfixe de code postal.
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
+  - name: int_order_items__enriched
+    description: >
+      Une ligne par article commandé, enrichie avec la catégorie produit
+      (traduite en anglais) et l'état/ville du vendeur.
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+      - name: product_category
+        tests:
+          - not_null
+      - name: item_total_value
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              strictly: false
+
+  - name: int_orders__delivery_metrics
+    description: >
+      Une ligne par commande LIVRÉE, avec délai réel, délai estimé, écart
+      (delay_days) et flag is_late. Base du mart delivery performance.
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: actual_delivery_days
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              strictly: false
+      - name: is_late
+        tests:
+          - not_null
+
+  - name: int_orders__joined
+    description: >
+      Table pivot au niveau commande : agrège articles, paiements et avis.
+      Base commune des 3 marts (sales, delivery, satisfaction).
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null

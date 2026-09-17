@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# dbt
+dbt/olist_dbt/target/
+dbt/olist_dbt/dbt_packages/
+dbt/olist_dbt/logs/
+profiles.yml
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# Airflow
+airflow/logs/
+airflow/.env
+
+# Secrets
+.env
+*.pem
+*.p8
+
+# Data brute (ne pas versionner les CSV)
+data/raw/*.csv
+!data/raw/.gitkeep
+
+logs/
+.user.yml

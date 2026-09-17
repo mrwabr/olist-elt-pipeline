@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: olist_raw
+    description: "Zone bronze (RAW), chargée depuis S3 via COPY INTO."
+    database: OLIST
+    schema: RAW
+    tables:
+      - name: orders
+      - name: order_items
+      - name: customers
+      - name: products
+      - name: payments
+      - name: reviews
+      - name: sellers
+      - name: geolocation
+      - name: category_translation

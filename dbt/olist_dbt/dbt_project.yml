@@ -1,0 +1,32 @@
+name: 'olist_dbt'
+version: '1.0.0'
+config-version: 2
+
+profile: 'olist_dbt'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  olist_reference_date: '2018-10-17'
+
+models:
+  olist_dbt:
+    +materialized: view
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: analytics

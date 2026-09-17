@@ -1,0 +1,1 @@
+# Backend local pour ce portfolio (simple). Pour un usage prod, migrer vers S3 backend.

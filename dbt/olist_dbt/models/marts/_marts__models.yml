@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: mart_sales_performance
+    description: "CA et nombre de commandes par mois, catégorie produit et région."
+    columns:
+      - name: order_month
+        tests:
+          - not_null
+      - name: n_orders
+        tests:
+          - not_null
+
+  - name: mart_delivery_performance
+    description: "Délais de livraison réels vs estimés et taux de retard par mois/région."
+    columns:
+      - name: late_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+
+  - name: mart_customer_satisfaction
+    description: "Notes moyennes clients et lien avec le retard de livraison."
+    columns:
+      - name: avg_review_score
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 5
