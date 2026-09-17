@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "dbt/**"
+      - ".github/workflows/dbt_ci.yml"
   pull_request:
     branches: [main]
     paths:
       - "dbt/**"
+  workflow_dispatch:
 
 jobs:
   dbt-test:
