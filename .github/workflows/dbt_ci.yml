@@ -1,0 +1,68 @@
+name: dbt CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "dbt/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "dbt/**"
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt
+        run: pip install dbt-snowflake==1.8.4
+
+      - name: Create dbt profile
+        run: |
+          mkdir -p $DBT_PROFILES_DIR
+          cat > $DBT_PROFILES_DIR/profiles.yml << EOF
+          olist_dbt:
+            target: ci
+            outputs:
+              ci:
+                type: snowflake
+                account: "${SNOWFLAKE_ACCOUNT}"
+                user: "${SNOWFLAKE_USER}"
+                password: "${SNOWFLAKE_PASSWORD}"
+                role: "${SNOWFLAKE_ROLE}"
+                warehouse: "${SNOWFLAKE_WAREHOUSE}"
+                database: "${SNOWFLAKE_DATABASE}"
+                schema: STAGING
+                threads: 4
+                client_session_keep_alive: false
+          EOF
+
+      - name: Install dbt packages
+        working-directory: dbt/olist_dbt
+        run: dbt deps
+
+      - name: dbt run
+        working-directory: dbt/olist_dbt
+        run: dbt run
+
+      - name: dbt test
+        working-directory: dbt/olist_dbt
+        run: dbt test
