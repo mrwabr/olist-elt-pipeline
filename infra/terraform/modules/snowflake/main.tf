@@ -51,6 +51,10 @@ resource "snowflake_stage" "s3_raw_stage" {
   storage_integration = snowflake_storage_integration.s3_integration.name
   file_format         = "TYPE = CSV FIELD_OPTIONALLY_ENCLOSED_BY = '\"' SKIP_HEADER = 1 NULL_IF = ('', 'NULL')"
   comment             = "Stage externe pointant vers la zone bronze S3."
+
+  lifecycle {
+    ignore_changes = [file_format]
+  }
 }
 
 # ---- Rôles RBAC (nouvelle ressource: snowflake_account_role) ----
