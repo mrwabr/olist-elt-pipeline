@@ -2,9 +2,6 @@
 
 Pipeline ELT cloud-natif, architecture **medallion (bronze / silver / gold)**, construit sur le dataset public [Olist Brazilian E-Commerce](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) (Kaggle, 9 fichiers CSV, ~127 Mo, ~1,5M lignes).
 
-Projet réalisé dans le cadre d'une candidature de stage PFE (Data Engineering / Data Cloud, 3e année ENSIAS).
-
-> Structure de repo et style de README inspirés de [mindofyaseen/Snowflake-Project](https://github.com/mindofyaseen/Snowflake-Project) — dataset, modèles dbt et code métier entièrement personnels.
 
 ---
 
